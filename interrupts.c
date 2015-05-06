@@ -8,6 +8,7 @@
 #include <msp430.h>
 #include "interrupts.h"
 #include "events.h"
+#include "nrf24api.h"
 #include "stdint.h"
 
 static volatile uint32_t WDT_Sec_Cnt = WDT_CPS;
@@ -72,11 +73,14 @@ __interrupt void WDT_ISR(void) {
 		tics++;
 	}
 
-#if TX_DEV
-	if (counter && --counter == 0) {
+//	if (counter) {
+	if (--counter == TIMEOUT / 2)
+		reset_connected();
+	else if (counter == 0) {
+		counter = TIMEOUT;
 		sys_event |= PING_EVENT;
 	}
-#endif
+//	}
 
 #if PTX_DEV
 	if (--data_sender == 0) {

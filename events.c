@@ -20,8 +20,6 @@ volatile mode dev_mode = DISCONNECTED;
 void spi_rx_event() {
 	recieve_bytes();
 	sys_event |= UART_TX_EVENT;
-	if (dev_mode != CONNECTED)
-		connect_RF();
 }
 
 // Transmit event
@@ -47,16 +45,11 @@ void uart_tx_event() {
 
 // Ping connection
 void ping_event() {
-#if PTX_DEV
-	if (connect()) {
+	if (is_connected()) {
 		connect_RF();
 	} else {
 		disconnect_RF();
 	}
-	rx_mode();
-#else
-	disconnect_RF();
-#endif
 }
 
 inline void connect_RF() {

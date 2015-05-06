@@ -39,8 +39,11 @@ void main() {
 	uart_init();
 	radio_init();
 
-	sys_event |= PING_EVENT;
-	rx_mode();
+#if PTX_DEV
+	open_stream(TX_MODE);
+#else
+	open_stream(RX_MODE);
+#endif
 
 	while (1) {
 		// disable interrupts while checking sys_event
@@ -52,9 +55,7 @@ void main() {
 
 		// else enable interrupts and goto sleep
 		else {
-			set_timeout();
 			__bis_SR_register(LPM1_bits | GIE);
-			reset_timeout();
 		}
 
 		if (rf_irq & RF24_IRQ_FLAGGED) {

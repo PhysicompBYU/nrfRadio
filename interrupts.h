@@ -17,7 +17,7 @@
 #define	WDT_CPS	(WDT_CLOCK/WDT_INT)	// WD clocks / second count = WDT interrupts / second (500 @16MHz clk)
 #define HALF_SECOND (WDT_CPS / 2)
 
-#define TIMEOUT WDT_CPS*2
+#define TIMEOUT WDT_CPS
 #define DATA_DELAY WDT_CPS/10
 
 #define GLED BIT4
@@ -35,7 +35,6 @@ void delay(uint16_t time);
 void set_timeout();
 void reset_timeout();
 
-#define TX_DEV 0
-#define PTX_DEV 1
+#define PTX_DEV 0
 
 #endif /* INTERRUPTS_H_ */

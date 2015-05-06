@@ -10,22 +10,23 @@
 
 #include "stdint.h"
 
-// enum
+// enums, typedefs
 typedef enum {
 	TX_MODE, RX_MODE
 } RF_MODE;
-
-//function prototypes
-void radio_init();
-void rx_mode();
-void open_stream(RF_MODE mode);
-void recieve_bytes();
-void transmit_bytes();
 
 typedef struct {
 	uint8_t size;
 	uint8_t buf[32];
 } BUFFER;
+
+//function prototypes
+void radio_init();
+void open_stream(RF_MODE mode);
+void recieve_bytes();
+void transmit_bytes();
+inline void reset_connected();
+uint8_t is_connected();
 
 //variables
 extern volatile BUFFER buffer;

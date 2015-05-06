@@ -391,8 +391,8 @@ void msprf24_init() {
 	msprf24_close_pipe_all(); /* Start off with no pipes enabled, let the user open as needed.  This also
 	 * clears the DYNPD register.
 	 */
-	msprf24_set_retransmit_delay(4000);  // A default I chose
-	msprf24_set_retransmit_count(15);    // A default I chose
+	msprf24_set_retransmit_delay(500);  // A default I chose
+	msprf24_set_retransmit_count(10);    // A default I chose
 	msprf24_set_speed_power();
 	msprf24_set_channel();
 	msprf24_set_address_width();
