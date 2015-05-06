@@ -10,17 +10,24 @@
 
 #include "stdint.h"
 
-void radio_init();
-int16_t connect();
-int16_t tx_send(char* data);
-void rx_mode();
-void disable_rx_mode();
-char* rx_fetch();
-
 // enum
 typedef enum {
-	TX_MODE,
-	RX_MODE
-}RF_MODE;
+	TX_MODE, RX_MODE
+} RF_MODE;
+
+//function prototypes
+void radio_init();
+void rx_mode();
+void open_stream(RF_MODE mode);
+void recieve_bytes();
+void transmit_bytes();
+
+typedef struct {
+	uint8_t size;
+	uint8_t buf[32];
+} BUFFER;
+
+//variables
+extern volatile BUFFER buffer;
 
 #endif /* NRF24API_H_ */

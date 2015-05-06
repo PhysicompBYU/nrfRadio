@@ -78,13 +78,8 @@ __interrupt void WDT_ISR(void) {
 	}
 #endif
 
-	if (!(P1IN & SWTCH0) && --data_sender == 0) {
-		data_sender = DATA_DELAY;
-		sys_event |= UART_TX_EVENT;
-	}
-
 #if PTX_DEV
-	if (dev_mode == CONNECTED && --data_sender == 0) {
+	if (--data_sender == 0) {
 		data_sender = DATA_DELAY;
 		sys_event |= SPI_TX_EVENT;
 	}

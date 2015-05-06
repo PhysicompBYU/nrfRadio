@@ -82,6 +82,11 @@ void print(const char *s) {
 		putchar(*s++);
 }
 
+void print_x(const char *s, uint8_t size){
+	while (size--)
+		putchar(*s++);
+}
+
 //------------------------------------------------------------------------------
 void printx(const uint8_t c) {
 	static char hex_table[] = "0123456789abcdef";

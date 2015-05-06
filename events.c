@@ -18,9 +18,7 @@ volatile mode dev_mode = DISCONNECTED;
 
 // Receive event, triggered by IRQ receive event
 void spi_rx_event() {
-	char* data = 0;
-	data = rx_fetch();
-	print(data);
+	recieve_bytes();
 	sys_event |= UART_TX_EVENT;
 	if (dev_mode != CONNECTED)
 		connect_RF();
@@ -28,12 +26,13 @@ void spi_rx_event() {
 
 // Transmit event
 void spi_tx_event() {
-	char data[32] = { 0 };
+	char i = 0;
 	static char tx_count = 0;
-	sprintf(data, "\n\r:%d", ++tx_count);
-	if (!tx_send(data))
-		sys_event |= PING_EVENT;
-	rx_mode();
+	sprintf(buffer.buf, "\n\r:%d", ++tx_count);
+	while (buffer.buf[i++])
+		;
+	buffer.size = i;
+	transmit_bytes();
 }
 
 // Serial UART receive, triggered by UART RX interrupt
@@ -43,10 +42,7 @@ void uart_rx_event() {
 
 // Serial UART transmit
 void uart_tx_event() {
-	char data[30] = { 0 };
-	static int txcount = 0;
-	sprintf(data, "\n\r:%d", ++txcount);
-	print(data);
+	print_x(buffer.buf, buffer.size);
 }
 
 // Ping connection
@@ -63,14 +59,14 @@ void ping_event() {
 #endif
 }
 
-void connect_RF() {
+inline void connect_RF() {
 	P1OUT &= ~RLED;
 	P1OUT |= GLED;
 	dev_mode = CONNECTED;
 }
 
-// Send end connection
-void disconnect_RF() {
+// Display connection lost
+inline void disconnect_RF() {
 	P1OUT &= ~GLED;
 	P1OUT |= RLED;
 	dev_mode = DISCONNECTED;

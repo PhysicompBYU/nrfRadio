@@ -32,7 +32,7 @@ void spi_tx_event();
 void uart_rx_event();
 void uart_tx_event();
 void ping_event();
-void connect_RF();
-void disconnect_RF();
+inline void connect_RF();
+inline void disconnect_RF();
 
 #endif /* EVENTS_H_ */

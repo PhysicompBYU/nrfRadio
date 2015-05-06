@@ -4,6 +4,7 @@
  *  Created on: Apr 30, 2015
  *      Author: bsnga
  */
+#include "stdint.h"
 
 #define TERMINAL print
 #define TERMINAL1(f,x) sprintf(buffer,f,x);print(buffer);
@@ -28,5 +29,6 @@
 void uart_init();
 void find_baud_rate();
 void print(const char *s);
+void print_x(const char *s, uint8_t size);
 
 //variables

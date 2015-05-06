@@ -35,7 +35,7 @@ void delay(uint16_t time);
 void set_timeout();
 void reset_timeout();
 
-#define TX_DEV 1
-#define PTX_DEV 0
+#define TX_DEV 0
+#define PTX_DEV 1
 
 #endif /* INTERRUPTS_H_ */

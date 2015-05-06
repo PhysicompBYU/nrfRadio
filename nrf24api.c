@@ -12,45 +12,40 @@
 #include "interrupts.h"
 #include "stdint.h"
 
-volatile char buf[32] = { 0 };
+volatile BUFFER buffer;
 volatile unsigned int user;
 
 //private globals
 static char addr[5] = { 0 };
 uint8_t payload_size = 0;
 
-void transmit_bytes(char* data) {
-	uint8_t i = 0;
+void transmit_bytes() {
+	// size 0 indicates dynamic size; must be specified using
+	//transmit_Xbytes(); 32 is max
+	if (payload_size > 32)
+		return;
+	else if (payload_size == 0)
+		w_tx_payload(buffer.size, buffer.buf);
+	else
+		w_tx_payload(payload_size, buffer.buf);
 
-	while (data[i]) {
-		buf[i] = data[i];
-		i++;
-	}
-
-	w_tx_payload(32, buf);
 	msprf24_activate_tx();
 }
 
-void transmit_Xbytes(const char* data, char size){
+void recieve_bytes() {
+	if (payload_size > 0)
+		buffer.size = payload_size;
+	else
+		buffer.size = r_rx_peek_payload_size();
 
-}
-
-char recieve_bytes() {
 	msprf24_get_irq_reason();
 	if (rf_irq & RF24_IRQ_RX) {
-		r_rx_payload(32, buf);
+		r_rx_payload(buffer.size, buffer.buf);
 		msprf24_irq_clear(RF24_IRQ_RX);
-		return (char*) buf;
+		return;
 	}
-	return 0;
-}
-
-void open_stream(RF_MODE mode) {
-
-	if (mode == TX_MODE)
-		return open_tx_stream();
-	else
-		return open_rx_stream();
+	buffer.size = 0;
+	return;
 }
 
 void open_tx_stream() {
@@ -77,6 +72,14 @@ void open_rx_stream() {
 
 	msprf24_standby();
 	rx_mode();
+}
+
+void open_stream(RF_MODE mode) {
+
+	if (mode == TX_MODE)
+		open_tx_stream();
+	else
+		open_rx_stream();
 }
 
 void radio_init() {
