@@ -15,6 +15,10 @@ typedef enum {
 	TX_MODE, RX_MODE
 } RF_MODE;
 
+typedef enum {
+	INIT, TIMEOUT, CONNECTED, LISTEN
+}NRF_STATE;
+
 typedef struct {
 	uint8_t size;
 	uint8_t buf[32];
@@ -25,8 +29,6 @@ void radio_init();
 void open_stream(RF_MODE mode);
 void recieve_bytes();
 void transmit_bytes();
-inline void reset_connected();
-uint8_t is_connected();
 
 //variables
 extern volatile BUFFER buffer;
