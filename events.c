@@ -25,10 +25,11 @@ void spi_rx_event() {
 // Transmit event
 void spi_tx_event() {
 	char i = 0;
-	static char tx_count = 0;
-	sprintf(buffer.buf, "\n\r:%d", ++tx_count);
-	while (buffer.buf[i++])
-		;
+	static int tx_count = 0;
+	sprintf(buffer.buf, "\n\r%d", ++tx_count);
+	while (buffer.buf[i]) {
+		i++;
+	}
 	buffer.size = i;
 	transmit_bytes();
 }

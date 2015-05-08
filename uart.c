@@ -35,13 +35,23 @@ void uart_init() {
 	P1SEL = BIT1 | BIT2;                            // P1.1=RXD, P1.2=TXD
 	P1SEL2 = BIT1 | BIT2;                           // P1.1=RXD, P1.2=TXD
 	// Configure USCI UART for BPS (9600)
+#if BPS == 57600
+	UCA0CTL1 = UCSWRST;
+	UCA0CTL0 = UCSPB;
+	UCA0BR0 = 8;
+	UCA0BR1 = 0;
+	UCA0MCTL = 11 << 4 | 0 << 1 | UCOS16;
+	UCA0CTL1 = UCSSEL_2;
+#else
 	baud_rate_20_bits = (SMCLK_HZ + (BPS >> 1)) / BPS;
 	UCA0CTL1 = UCSWRST;             // Hold USCI in reset to allow configuration
-	UCA0CTL0 = UCSPB; // No parity, LSB first, 8 bits, one stop bit, UART (async)
-	UCA0BR1 = (baud_rate_20_bits >> 12) & 0xFF;    // High byte of whole divisor
-	UCA0BR0 = (baud_rate_20_bits >> 4) & 0xFF;      // Low byte of whole divisor
-	UCA0MCTL = ((baud_rate_20_bits << 4) & 0xF0) | UCOS16; // Fractional divisor, over sampling mode
-	UCA0CTL1 = UCSSEL_2; // Use SMCLK for bit rate generator, then release reset
+	UCA0CTL0 = UCSPB;// No parity, LSB first, 8 bits, one stop bit, UART (async)
+	UCA0BR1 = (baud_rate_20_bits >> 12) & 0xFF;// High byte of whole divisor
+	UCA0BR0 = (baud_rate_20_bits >> 4) & 0xFF;// Low byte of whole divisor
+	UCA0MCTL = ((baud_rate_20_bits << 4) & 0xF0) | UCOS16;// Fractional divisor, over sampling mode
+	UCA0CTL1 = UCSSEL_2;// Use SMCLK for bit rate generator, then release reset
+
+#endif
 
 	IE2 |= UCA0RXIE; // enable rx interrupt (echoing)
 
@@ -82,7 +92,7 @@ void print(const char *s) {
 		putchar(*s++);
 }
 
-void print_x(const char *s, uint8_t size){
+void print_x(const char *s, uint8_t size) {
 	while (size--)
 		putchar(*s++);
 }

@@ -18,7 +18,7 @@
 #define HALF_SECOND (WDT_CPS / 2)
 
 #define TIMEOUT WDT_CPS
-#define DATA_DELAY WDT_CPS/10
+#define DATA_DELAY WDT_CPS/100
 
 #define GLED BIT4
 #define RLED BIT0
@@ -35,6 +35,6 @@ void delay(uint16_t time);
 void set_timeout();
 void reset_timeout();
 
-#define PTX_DEV 0
+#define PTX_DEV 1
 
 #endif /* INTERRUPTS_H_ */

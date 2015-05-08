@@ -103,7 +103,7 @@ void radio_init() {
 	/* Initial values for nRF24L01+ library config variables */
 	rf_crc = RF24_EN_CRC | RF24_CRCO; // CRC enabled, 16-bit
 	rf_addr_width = 5;
-	rf_speed_power = RF24_SPEED_1MBPS | RF24_POWER_0DBM;
+	rf_speed_power = RF24_SPEED_2MBPS | RF24_POWER_0DBM;
 	rf_channel = 120;
 
 // Set our RX address
