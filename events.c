@@ -14,7 +14,6 @@
 #include <stdio.h>
 
 volatile uint16_t sys_event = 0;
-volatile mode dev_mode = DISCONNECTED;
 
 // Receive event, triggered by IRQ receive event
 void spi_rx_event() {
@@ -56,12 +55,10 @@ void ping_event() {
 inline void connect_RF() {
 	P1OUT &= ~RLED;
 	P1OUT |= GLED;
-	dev_mode = CONNECTED;
 }
 
 // Display connection lost
 inline void disconnect_RF() {
 	P1OUT &= ~GLED;
 	P1OUT |= RLED;
-	dev_mode = DISCONNECTED;
 }
