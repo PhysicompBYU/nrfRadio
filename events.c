@@ -25,7 +25,7 @@ void spi_rx_event() {
 void spi_tx_event() {
 	char i = 0;
 	static int tx_count = 0;
-	sprintf(buffer.buf, "\n\r%d", ++tx_count);
+	sprintf(buffer.buf, "\n\r%d: 123456789", ++tx_count);
 	while (buffer.buf[i]) {
 		i++;
 	}

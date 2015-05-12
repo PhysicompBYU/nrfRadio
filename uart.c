@@ -25,7 +25,7 @@ unsigned int count;
 
 uint16_t tail = 0;
 uint16_t size = 0;
-char txbuffer[32] = { 0 };
+char txbuffer[128];
 
 void uart_init() {
 	memset(txbuffer, 0, sizeof(txbuffer));

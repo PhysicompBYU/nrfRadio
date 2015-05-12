@@ -56,7 +56,7 @@ void delay(uint16_t time) {
 
 //---------------------------------------------------------------------
 void set_timeout() {
-	counter = DATA_DELAY;
+	counter = DELAY;
 }
 
 void reset_timeout() {

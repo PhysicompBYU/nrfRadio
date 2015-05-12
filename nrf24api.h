@@ -29,8 +29,8 @@ void radio_init();
 void open_stream(RF_MODE mode);
 void recieve_bytes();
 void transmit_bytes();
+void reset_connected();
 uint8_t is_connected();
-inline void reset_connected();
 
 //variables
 extern volatile BUFFER buffer;
