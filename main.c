@@ -14,6 +14,23 @@
  * P1.3 BTN0 (input)
  * P1.6 LED1 (output)
  */
+/* Alternate Pin Mapping (if using USCI_B for SPI):
+ *
+ * MSP430 ................ nRF24L01+
+ * P1.5 SCLK ------------> SCK
+ * P1.6 MISO <------------ MISO
+ * P1.7 MOSI ------------> MOSI
+ * P2.0 CE --------------> CE
+ * P2.1 CSn -------------> CSN
+ * P2.2 IRQ <------------- IRQ
+ *
+ * Additional Pins:
+ * P1.0 LED0 (output)
+ * P1.3 BTN0 (input)
+ * P1.4 LED1 (output)
+ * IMPORTANT TODO: Note that since P1.6 is used for MISO, we have to
+ * wire LED1 directly to P1.4.
+ */
 
 #include <msp430.h>
 #include "msprf24.h"
@@ -38,12 +55,12 @@ void main() {
 	interrupts_WDT_init();
 	uart_init();
 	radio_init();
-
-#if PTX_DEV
-	open_stream(TX_MODE);
-#else
-	open_stream(RX_MODE);
-#endif
+//
+//#if PTX_DEV
+//	open_stream(TX_MODE);
+//#else
+//	open_stream(RX_MODE);
+//#endif
 
 	while (1) {
 		// disable interrupts while checking sys_event

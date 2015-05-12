@@ -18,16 +18,61 @@ volatile unsigned int user;
 //private globals
 static char addr[5] = { 0 };
 uint8_t payload_size = 0;
-uint8_t retransmits = 0;
-uint16_t lost_packets = 0;
-uint8_t connected = 0;
 
-inline void reset_connected() {
-	connected = 0;
+NRF_STATE nrf_state;
+static uint8_t tx_assigned = 0;
+static uint8_t tx_active = 0;
+static uint8_t tx_pend = 0;
+static uint8_t pipe_set = 0;
+static uint8_t tiemstep_delay = 0;
+
+void timestep_machine() {
+	switch (nrf_state) {
+	case TIMEOUT:
+		if(TACCR0 == timestep_delay){
+			TACCR0 = HR_DELAY;
+		}else{
+			timestep_delay += DELTA_TIMEOUT;
+			TACCR0 = timestep_delay;
+		}
+		break;
+	case CONNECTED:
+
+		break;
+		default;
+	}
+	buffer.buf[0] = CMD_REQUEST;
+	buffer.buf[1] = ~CMD_REQUEST;
+	buffer.size = 2;
+	transmit_bytes();
+	return;
 }
 
-uint8_t is_connected() {
-	return connected;
+void interrstep_machine() {
+
+	return;
+}
+
+void set_state(NRF_STATE new_state) {
+	nrf_state = new_state;
+	TAR = 0;
+	switch (new_state) {
+	case INIT:
+		TACCR0 = 0;
+		break;
+	case TIMEOUT:
+		timestep_delay = TO_INIT;
+		TACCR0 = TO_INIT;
+		break;
+	case CONNECTED:
+		TACCR0 = CONNECTED_TIMEOUT;
+		break;
+	case LISTEN:
+
+		break;
+	default:
+	}
+	return;
 }
 
 void transmit_bytes() {
@@ -41,7 +86,6 @@ void transmit_bytes() {
 		w_tx_payload(payload_size, buffer.buf);
 
 	msprf24_activate_tx();
-	retransmits = msprf24_get_last_retransmits();
 }
 
 // Recieves packets, loading into buffer.buf.  buffer.size contains
@@ -56,12 +100,9 @@ void recieve_bytes() {
 	if (rf_irq & RF24_IRQ_RX) {
 		r_rx_payload(buffer.size, buffer.buf);
 		msprf24_irq_clear(RF24_IRQ_RX);
-		connected = 1;
 		return;
 	} else if (rf_irq & RF24_IRQ_TX) {
-		connected = 1;
 	} else if (rf_irq & RF24_IRQ_TXFAILED) {
-		connected = 0;
 	}
 	msprf24_irq_clear(RF24_IRQ_RX);
 	buffer.size = 0;
@@ -98,7 +139,7 @@ void open_stream(RF_MODE mode) {
 }
 
 void radio_init() {
-	user = 0xFE;
+	nrf_state = INIT;
 
 	/* Initial values for nRF24L01+ library config variables */
 	rf_crc = RF24_EN_CRC | RF24_CRCO; // CRC enabled, 16-bit
@@ -117,5 +158,41 @@ void radio_init() {
 	w_tx_addr(addr);
 	w_rx_addr(0, addr); // Pipe 0 receives auto-ack's, autoacks are sent back to the TX addr so the PTX node
 // needs to listen to the TX addr on pipe#0 to receive them.
+
+	//crystal init
+	BCSCTL1 |= DIVA0 | DIVA1;	// Set ACLK divider to 8
+	BCSCTL3 |= XCAP0 | XCAP1;	// Set crystal capacitors to 12.5 pF
+	P2DIR &= ~BIT6;		// Set P2.6/7 to XIN/XOUT
+	P2DIR |= BIT7;
+	P2SEL |= BIT6 | BIT7;
+	P2SEL2 &= ~(BIT6 | BIT7);
+	while (BCSCTL3 & LFXT1OF)
+		;		// wait for crystal to stabilize
+
+	//initialize timerA
+	P1OUT &= ~(GLED | RLED);
+	TACCR0 = 0;
+	TACTL = TASSEL_1 | ID_2 | MC_1;
+	TACCTL0 |= CCIE;
+	TACCTL1 |= CCIE;
+	TAR = 400;
+	TACCR1 = 800;
+	TACCR0 = 1024;
 }
+
+// Timer A1 interrupt service routine
+//
+#pragma vector = TIMER0_A1_VECTOR
+__interrupt void TIMER0A1_ISR(void) {
+	TACCTL1 &= ~CCIFG;
+	P1OUT ^= RLED + GLED;
+	return;
+} // end TIMERA0_VECTOR
+// Timer A1 interrupt service routine
+//
+#pragma vector = TIMER0_A0_VECTOR
+__interrupt void TIMER0A0_ISR(void) {
+	P1OUT ^= RLED + GLED;
+	return;
+} // end TIMERA0_VECTOR
 

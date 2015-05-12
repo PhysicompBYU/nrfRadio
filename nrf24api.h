@@ -15,10 +15,22 @@ typedef enum {
 	TX_MODE, RX_MODE
 } RF_MODE;
 
+typedef enum {
+	INIT, TIMEOUT, CONNECTED, LISTEN
+} NRF_STATE;
+
 typedef struct {
 	uint8_t size;
 	uint8_t buf[32];
 } BUFFER;
+
+//defines
+#define CMD_REQUEST 0x96
+#define MAX_TIMEOUT 4096 //2000 ms
+#define DELTA_TIMEOUT 100
+#define TO_INIT 4
+#define HR_DELAY 2
+#define CONNECTED_TIMEOUT 1000
 
 //function prototypes
 void radio_init();

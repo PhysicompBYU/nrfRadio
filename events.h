@@ -10,14 +10,8 @@
 #ifndef EVENTS_H_
 #define EVENTS_H_
 
-//enums
-typedef enum {
-	CONNECTED, DISCONNECTED
-} mode;
-
 //externs
 extern volatile uint16_t sys_event;
-extern volatile mode dev_mode;
 
 // Event flags, in priority order
 #define SPI_TX_EVENT	BIT0

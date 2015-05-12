@@ -10,14 +10,14 @@
 
 #include <stdint.h>
 
-#define myCLOCK	16000000			// clock speed 1.2 Mhz
+#define myCLOCK	16000000
 #define WDT_CLOCK 8000000
 #define WDT_INT	500
 #define	WDT_CTL	WDT_MDLY_0_5		//
 #define	WDT_CPS	(WDT_CLOCK/WDT_INT)	// WD clocks / second count = WDT interrupts / second (500 @16MHz clk)
 #define HALF_SECOND (WDT_CPS / 2)
 
-#define TIMEOUT WDT_CPS
+#define DELAY WDT_CPS
 #define DATA_DELAY WDT_CPS/100
 
 #define GLED BIT4
@@ -35,6 +35,7 @@ void delay(uint16_t time);
 void set_timeout();
 void reset_timeout();
 
-#define PTX_DEV 1
+#define PTX_DEV 0
+#define NOTEST 0
 
 #endif /* INTERRUPTS_H_ */

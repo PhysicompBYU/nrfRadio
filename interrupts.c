@@ -56,7 +56,7 @@ void delay(uint16_t time) {
 
 //---------------------------------------------------------------------
 void set_timeout() {
-	counter = TIMEOUT;
+	counter = DELAY;
 }
 
 void reset_timeout() {
@@ -73,14 +73,14 @@ __interrupt void WDT_ISR(void) {
 		tics++;
 	}
 
-//	if (counter) {
-	if (--counter == TIMEOUT / 2)
+#if NOTEST
+	if (--counter == DELAY / 2)
 		reset_connected();
 	else if (counter == 0) {
-		counter = TIMEOUT;
+		counter = DELAY;
 		sys_event |= PING_EVENT;
 	}
-//	}
+#endif
 
 #if PTX_DEV
 	if (--data_sender == 0) {
