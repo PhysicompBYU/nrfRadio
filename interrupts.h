@@ -28,6 +28,7 @@ extern volatile uint16_t timeout;
 extern volatile uint16_t tics;
 
 void interrupts_WDT_init();
+void interrupts_timerA_init();
 uint32_t interrupts_set_WDT_interval(uint32_t interval);
 void interrupts_start_WDT_PWM();
 void interrupts_stop_WDT_PWM();

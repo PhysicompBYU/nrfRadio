@@ -53,6 +53,7 @@ void main() {
 
 	port1_init();
 	interrupts_WDT_init();
+	interrupts_timerA_init();
 	uart_init();
 	radio_init();
 //
@@ -67,38 +68,35 @@ void main() {
 		_disable_interrupts();
 
 		// if event pending, enable interrupts
-		if (sys_event || rf_irq)
+		if (sys_event)
 			_enable_interrupt();
 
 		// else enable interrupts and goto sleep
 		else {
 			__bis_SR_register(LPM1_bits | GIE);
 		}
-
-		if (rf_irq & RF24_IRQ_FLAGGED) {
-			spi_rx_event();
+		if (sys_event & SPI_EVENT) {
+			sys_event &= ~SPI_EVENT;
+			spi_event();
+		} else if (sys_event & NRF_TIMESTEP) {
+			sys_event &= ~NRF_TIMESTEP;
+			timestep_machine();
+		} else if (sys_event & UART_RX_EVENT) {
+			sys_event &= ~UART_RX_EVENT;
+			uart_rx_event();
+		} else if (sys_event & UART_TX_EVENT) {
+			sys_event &= ~UART_TX_EVENT;
+			uart_tx_event();
+		} else if (sys_event & PING_EVENT) {
+			sys_event &= ~PING_EVENT;
+			ping_event();
 		} else {
-
-			if (sys_event & SPI_TX_EVENT) {
-				sys_event &= ~SPI_TX_EVENT;
-				spi_tx_event();
-			} else if (sys_event & UART_RX_EVENT) {
-				sys_event &= ~UART_RX_EVENT;
-				uart_rx_event();
-			} else if (sys_event & UART_TX_EVENT) {
-				sys_event &= ~UART_TX_EVENT;
-				uart_tx_event();
-			} else if (sys_event & PING_EVENT) {
-				sys_event &= ~PING_EVENT;
-				ping_event();
-			} else {
-				P1OUT &= ~(RLED + GLED);
-				while (1) {
-					delay(50);
-					P1OUT ^= RLED + GLED;
-				}
-
+			P1OUT &= ~(RLED + GLED);
+			while (1) {
+				delay(50);
+				P1OUT ^= RLED + GLED;
 			}
+
 		}
 
 	}

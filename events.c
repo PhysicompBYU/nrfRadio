@@ -15,22 +15,10 @@
 
 volatile uint16_t sys_event = 0;
 
-// Receive event, triggered by IRQ receive event
-void spi_rx_event() {
-	recieve_bytes();
-	sys_event |= UART_TX_EVENT;
-}
-
 // Transmit event
-void spi_tx_event() {
-	char i = 0;
-	static int tx_count = 0;
-	sprintf(buffer.buf, "\n\r%d", ++tx_count);
-	while (buffer.buf[i]) {
-		i++;
-	}
-	buffer.size = i;
-	transmit_bytes();
+void spi_event() {
+	IRQ_step_machine();
+	print_x(buffer.buf, buffer.size);
 }
 
 // Serial UART receive, triggered by UART RX interrupt

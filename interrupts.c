@@ -48,6 +48,25 @@ void interrupts_WDT_init() {
 	return;
 }
 
+void interrupts_timerA_init() {
+	//crystal init
+	BCSCTL1 |= DIVA0 | DIVA1;	// Set ACLK divider to 8
+	BCSCTL3 |= XCAP0 | XCAP1;	// Set crystal capacitors to 12.5 pF
+	P2DIR &= ~BIT6;		// Set P2.6/7 to XIN/XOUT
+	P2DIR |= BIT7;
+	P2SEL |= BIT6 | BIT7;
+	P2SEL2 &= ~(BIT6 | BIT7);
+	while (BCSCTL3 & LFXT1OF)
+		;		// wait for crystal to stabilize
+
+	//initialize timerA
+	P1OUT &= ~(GLED | RLED);
+	TACCR0 = 0;
+	TACTL = TASSEL_1 | ID_1 | MC_1;
+	TACCTL0 |= CCIE;
+	TACCR0 = 4;
+}
+
 //----------------------------------------------------------------------
 void delay(uint16_t time) {
 	delay_cnt = time;
@@ -75,7 +94,7 @@ __interrupt void WDT_ISR(void) {
 
 #if NOTEST
 	if (--counter == DELAY / 2)
-		reset_connected();
+	reset_connected();
 	else if (counter == 0) {
 		counter = DELAY;
 		sys_event |= PING_EVENT;
@@ -96,4 +115,24 @@ __interrupt void WDT_ISR(void) {
 	if (sys_event)
 		__bic_SR_register_on_exit(LPM4_bits);
 }
+
+// Timer A1 interrupt service routine
+//
+#pragma vector = TIMER0_A1_VECTOR
+__interrupt void TIMER0A1_ISR(void) {
+	TACCTL1 &= ~CCIFG;
+	if (timestep_count && --timestep_count == 0) {
+		sys_event |= NRF_TIMESTEP;
+	}
+	return;
+} // end TIMERA0_VECTOR
+// Timer A1 interrupt service routine
+//
+#pragma vector = TIMER0_A0_VECTOR
+__interrupt void TIMER0A0_ISR(void) {
+	if (timestep_count && --timestep_count == 0) {
+		sys_event |= NRF_TIMESTEP;
+	}
+	return;
+} // end TIMERA0_VECTOR
 
