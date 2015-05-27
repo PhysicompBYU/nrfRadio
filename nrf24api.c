@@ -22,11 +22,12 @@
 #define MAX_TIMEOUT (CURR_CPS / 2)	//2000 ms
 #define DELTA_TIMEOUT (CURR_CPS / 20)
 #define TO_INIT (CURR_CPS / 500)
-#define CONNECTED_TIMEOUT (CURR_CPS / 2)
-#define LISTEN_TIMEOUT (CONNECTED_TIMEOUT * 1.5)
+#define CONNECTED_TIMEOUT (CURR_CPS / 6)
+#define LISTEN_TIMEOUT (CONNECTED_TIMEOUT * 2)
 
 #define CMD_REQ 0x96
 #define CONNECT_REQ 0x55
+#define ERROR while(1){P1OUT^=(RLED|GLED);delay(50);}
 
 typedef enum {
 	INIT, TIMEOUT, CONNECTED, LISTEN
@@ -44,8 +45,7 @@ static volatile uint8_t timestep_delay = 0;
 
 NRF_STATE nrf_state;
 
-static IO_THING* tx_buf[6] = { 0 };
-static IO_THING* rx_buf[6] = { 0 };
+static PIPE* pipes;
 
 // RX status variables
 static uint8_t tx_assigned = 0;
@@ -54,8 +54,7 @@ static uint8_t tx_pend = 0;
 static uint8_t pend_bytes[6] = { 0 };
 
 // TX status variables
-static uint8_t pipe_set = 0;
-static uint8_t command = 0;
+static uint8_t commands[6] = { 0 };
 
 // private functions
 void set_state(NRF_STATE new_state);
@@ -68,13 +67,13 @@ void timestep_machine() {
 		if (timestep_delay < MAX_TIMEOUT) {
 			timestep_delay += DELTA_TIMEOUT;
 		}
-	case CONNECTED:
+		command = CONNECT_REQ;
+		transmit_bytes();
 		timestep_count = timestep_delay;
-
-		if (pipe_set) {
+	case CONNECTED:
+		if (!timestep_count) {
 			command = CMD_REQ;
-		} else {
-			command = CONNECT_REQ;
+			timestep_count = timestep_delay;
 		}
 		transmit_bytes();
 		break;
@@ -89,40 +88,66 @@ void timestep_machine() {
 }
 
 void IRQ_step_machine() {
+	uint8_t pipe;
 	int i;
-
 	msprf24_get_irq_reason();
 
 	switch (nrf_state) {
 	case TIMEOUT:
 		if (rf_irq & RF24_IRQ_RX) {
-			set_state(CONNECTED);
 			recieve_bytes();
-			set_tx_addr(command);
+			set_state(TIMEOUT);
 		}
 		break;
 	case CONNECTED:
 		if (rf_irq & RF24_IRQ_RX) {
 			recieve_bytes();
-		} else if (rf_irq & RF24_IRQ_TXFAILED) {
-			set_state(TIMEOUT);
-		} else if (rf_irq & RF24_IRQ_TX) {
-
-		} else {
-			while (1) {
-				//MAX_RT if we get here
-				P1OUT ^= (GLED | RLED);
-				delay(50);
-			}
 		}
 		break;
 	case LISTEN:
+		static uint8_t count = 0;
+		static uint8_t marker = 0;
 		if (rf_irq & RF24_IRQ_RX) {
-			recieve_bytes();
+			pipe = recieve_bytes();
 
+			if (rf_irq & RF24_IRQ_TX) {
+				if (pipe) {
+					for (pend_bytes[pipe]; pend_bytes[pipe] > 0; //1 less than the size in pend_bytes
+							pend_bytes[pipe]--)
+						read_byte(tx_buf[pipe]);
+				}
+				pend_bytes[pipe] = 0;
+				commands[pipe] = 0;
+				count--;
+			} else if (count) {
+				count = 0;
+				flush_tx();
+				memset(pend_bytes, 0, sizeof(pend_bytes));
+			}
+			for (i = 1; i < 7; i++) {
+				uint8_t j =
+						marker + (marker + i < 6) ? marker + i : marker + i - 6;
+				if (j) {
+					if (commands[j] || tx_buf[j]->size) {
+						pend_bytes[j] = 1 + transmit_bytes(j);
+					}
+				} else {
+					if (commands[0]) {
+						pend_bytes[0] = 1;
+						transmit_bytes(0);
+					}
+				}
+				count++;
+				if (count >= 3)
+					break;
+			}
 		}
+		break;
+	default:
+		ERROR
+		;
+		break;
 	}
-
 	return;
 }
 
@@ -146,17 +171,35 @@ void set_state(NRF_STATE new_state) {
 		timestep_count = LISTEN_TIMEOUT;
 		break;
 	default:
+		ERROR
+		;
 		break;
 	}
 	return;
 }
 
-void transmit_bytes() {
-	uint8_t size = tx_buf[0]->size;
-	if (size > 31)
-		size = 31;
-	write_payload(size);
-	msprf24_activate_tx();
+void transmit_bytes(uint8_t pipe_dest) {
+	switch (nrf_state) {
+	case TIMEOUT:
+	case CONNECTED:
+		uint8_t size = tx_buf[0]->size;
+		if (size > 31)
+			size = 31;
+		write_payload(size);
+		msprf24_activate_tx();
+		break;
+	case LISTEN:
+		if (pipe) {
+			size = (size < 32) ? size : 31;
+		} else
+			size = 0;
+		write_ack_payload(pipe_dest, size);
+		break;
+	default:
+		ERROR
+		;
+		break;
+	}
 }
 
 // Write to TX_FIFO, based on Spirilis' API function w_tx_payload()
@@ -165,21 +208,37 @@ void write_payload(uint8_t size) {
 
 	CSN_EN;
 	rf_status = spi_transfer(RF24_W_TX_PAYLOAD);
-	spi_transfer(command);
+	spi_transfer(commands[0]);
 	for (i = 0; i < len; i++)
 		spi_transfer(read_byte(tx_buf[0]));
+	CSN_DIS;
+}
+void write_ack_payload(uint8_t pipe, uint8_t len) {
+	uint16_t i = 0;
+	CSN_EN;
+
+	if (pipe > 5)
+		return;
+	if (!(rf_feature & RF24_EN_ACK_PAY))  // ACK payloads must be enabled...
+		return;
+
+	rf_status = spi_transfer(RF24_W_ACK_PAYLOAD | pipe);
+	spi_transfer(commands[pipe]);
+	for (i = len - 1; i; i--) {
+		spi_transfer(tx_buf[pipe]);
+	}
 	CSN_DIS;
 }
 
 // Recieves packets, loading into buffer.buf.  buffer.size contains
 // size of payload, 0 if none recieved succesfully.
-void recieve_bytes() {
+uint8_t recieve_bytes() {
 	uint8_t pipe;
 	while (rf_irq & RF24_IRQ_RX) {
 		pipe = read_payload();
 		msprf24_irq_clear(RF24_IRQ_RX);
 	}
-	return;
+	return pipe;
 }
 
 // Read from RX FIFO, based on Spirilis' API function r_rx_payload()
@@ -193,7 +252,7 @@ uint8_t read_payload() {
 	command = spi_transfer(0xFF);
 	pipe = (rf_status & 0x0E) >> 1;
 
-	for (i = len; i; i--)
+	for (i = len - 1; i; i--)
 		write_byte(rx_buf[pipe], spi_transfer(0xFF));
 
 	CSN_DIS;
@@ -201,13 +260,25 @@ uint8_t read_payload() {
 	return pipe;
 }
 
+PIPE* open_pipe(uint8_t pipe) {
+	PIPE* new_pipe = (PIPE*) malloc(sizeof(PIPE));
+	if (!new_pipe) {
+		ERROR;
+	}
+
+	msprf24_set_pipe_packetsize(pipe, 0);
+	msprf24_open_pipe(pipe, 1);  // Open pipe#0 with Enhanced ShockBurst
+
+
+
+}
+
 void open_tx_stream() {
 
 	set_tx_addr(0);
 	set_rx_addr(0, pipe_addr[0]);
 
-	msprf24_set_pipe_packetsize(0, 0);
-	msprf24_open_pipe(0, 1);  // Open pipe#0 with Enhanced ShockBurst
+	pipes[0] = open_pipe(0);
 
 	msprf24_standby();
 
@@ -239,14 +310,6 @@ void open_rx_stream() {
 	msprf24_activate_rx();
 }
 
-void open_stream(RF_MODE mode) {
-
-	if (mode == TX_MODE)
-		open_tx_stream();
-	else
-		open_rx_stream();
-}
-
 void radio_init() {
 	nrf_state = INIT;
 
@@ -261,7 +324,9 @@ void radio_init() {
 
 }
 
-void set_tx_addr(uint8_t pipe) {
+uint8_t set_tx_addr(uint8_t pipe) {
+	if (pipe > 5)
+		return 0;
 	const uint8_t *addr = pipe_addr[pipe];
 	int i;
 
@@ -271,6 +336,7 @@ void set_tx_addr(uint8_t pipe) {
 		spi_transfer(addr[i]);
 	}
 	CSN_DIS;
+	return 1;
 }
 
 void set_rx_addr(uint8_t pipe, const uint8_t *addr) {

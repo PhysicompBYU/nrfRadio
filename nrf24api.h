@@ -10,25 +10,24 @@
 
 #include "stdint.h"
 
-// enums, typedefs
-typedef enum {
-	TX_MODE, RX_MODE
-} RF_MODE;
-
 // io api:	uint8_t read_byte(IO_THING thing)
 // 			write_byte(IO_THING thing, uint8_t data)
 typedef struct {
 	uint8_t *buffer;
 	uint16_t tail;
 	uint16_t size;
-	uint8_t has_next;
 } IO_THING;
 
+typedef struct {
+	IO_THING *tx_buf;
+	IO_THING *rx_buf;
+	uint8_t command_recieved;
+	uint8_t command_sent;
+} PIPE;
 
 //defines
 // CURR_CPS must be at least 500, which is 1 interrupt per 2 ms
 #define CURR_CPS 500	//count every .5ms -> 2000 counts per sec
-
 
 //function prototypes
 void radio_init();
