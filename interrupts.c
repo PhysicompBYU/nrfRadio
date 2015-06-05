@@ -8,16 +8,17 @@
 #include <msp430.h>
 #include "interrupts.h"
 #include "events.h"
-#include "nrf24api.h"
 #include "stdint.h"
+#include "nrfradio.h"
 
 static volatile uint32_t WDT_Sec_Cnt = WDT_CPS;
 static volatile uint32_t toggle_led_cnt = 0;
 static uint32_t WDT_PWM_cnt = WDT_CPS / 16; // default 1/16 second interval. DO NOT DEFAULT TO ZERO.
 static const uint32_t WDT_PWM_max = WDT_CPS; // max 1 second interval
+uint8_t connected = 0;
 
 volatile uint16_t data_sender = DATA_DELAY;
-volatile uint16_t counter = TIMEOUT;
+volatile uint16_t counter = DELAY;
 volatile uint16_t tics = 0;
 volatile uint16_t delay_cnt = 0;
 
@@ -70,16 +71,7 @@ void interrupts_timerA_init() {
 //----------------------------------------------------------------------
 void delay(uint16_t time) {
 	delay_cnt = time;
-	LPM3;
-}
-
-//---------------------------------------------------------------------
-void set_timeout() {
-	counter = DELAY;
-}
-
-void reset_timeout() {
-	counter = 0;
+	LPM0;
 }
 
 //-- Watchdog Timer ISR ---------------------------------------------
@@ -92,21 +84,22 @@ __interrupt void WDT_ISR(void) {
 		tics++;
 	}
 
-#if NOTEST
-	if (--counter == DELAY / 2)
-	reset_connected();
-	else if (counter == 0) {
+	if (--counter == 0) {
 		counter = DELAY;
-		sys_event |= PING_EVENT;
+		if (connected) {
+			P1OUT &= ~RLED;
+			P1OUT |= GLED;
+		} else {
+			P1OUT &= ~GLED;
+			P1OUT |= RLED;
+		}
+		connected = 0;
 	}
-#endif
 
-#if PTX_DEV
 	if (--data_sender == 0) {
 		data_sender = DATA_DELAY;
-		sys_event |= SPI_TX_EVENT;
+		sys_event |= TRANSMIT_EVENT;
 	}
-#endif
 
 	if (delay_cnt && !(--delay_cnt)) {
 		__bic_SR_register_on_exit(LPM3_bits);
@@ -116,23 +109,28 @@ __interrupt void WDT_ISR(void) {
 		__bic_SR_register_on_exit(LPM4_bits);
 }
 
+#pragma vector = PORT2_VECTOR
+__interrupt void P2_IRQ(void) {
+	if (P2IFG & nrfIRQpin) {
+		__bic_SR_register_on_exit(LPM4_bits);    // Wake up
+		rf_irq |= RF24_IRQ_FLAGGED;
+		sys_event |= IRQ_EVENT;
+		P2IFG &= ~nrfIRQpin;   // Clear interrupt flag
+	}
+}
+
 // Timer A1 interrupt service routine
 //
 #pragma vector = TIMER0_A1_VECTOR
 __interrupt void TIMER0A1_ISR(void) {
 	TACCTL1 &= ~CCIFG;
-	if (timestep_count && --timestep_count == 0) {
-		sys_event |= NRF_TIMESTEP;
-	}
-	return;
+
 } // end TIMERA0_VECTOR
 // Timer A1 interrupt service routine
 //
 #pragma vector = TIMER0_A0_VECTOR
 __interrupt void TIMER0A0_ISR(void) {
-	if (timestep_count && --timestep_count == 0) {
-		sys_event |= NRF_TIMESTEP;
-	}
+
 	return;
 } // end TIMERA0_VECTOR
 

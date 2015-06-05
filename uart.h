@@ -30,5 +30,7 @@ void uart_init();
 void find_baud_rate();
 void print(const char *s);
 void print_x(uint8_t *s, uint8_t size);
+int uart_putchar(uint8_t c);
+uint8_t uart_getchar(void);
 
 //variables

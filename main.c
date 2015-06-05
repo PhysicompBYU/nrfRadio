@@ -33,12 +33,11 @@
  */
 
 #include <msp430.h>
-#include "msprf24.h"
-#include "nrf_userconfig.h"
 #include "stdint.h"
+#include "nrfradio.h"
+#include "msp430_spi.h"
 #include "interrupts.h"
 #include "uart.h"
-#include "nrf24api.h"
 #include "events.h"
 
 void port1_init();
@@ -53,15 +52,14 @@ void main() {
 
 	port1_init();
 	interrupts_WDT_init();
-	interrupts_timerA_init();
+//	interrupts_timerA_init();
 	uart_init();
-	radio_init();
-//
-//#if PTX_DEV
-//	open_stream(TX_MODE);
-//#else
-//	open_stream(RX_MODE);
-//#endif
+	spi_init();
+	radio_init(100, 2);
+
+
+	radio_open_pipe(DEV, RCV);
+	radio_open_pipe(!DEV, TX);
 
 	while (1) {
 		// disable interrupts while checking sys_event
@@ -75,22 +73,22 @@ void main() {
 		else {
 			__bis_SR_register(LPM1_bits | GIE);
 		}
-		if (sys_event & SPI_EVENT) {
-			sys_event &= ~SPI_EVENT;
-			spi_event();
-		} else if (sys_event & NRF_TIMESTEP) {
-			sys_event &= ~NRF_TIMESTEP;
-			timestep_machine();
+		if (sys_event & TRANSMIT_EVENT) {
+			sys_event &= ~TRANSMIT_EVENT;
+			transmit_event();
+		} else if (sys_event & RECIEVE_EVENT) {
+			sys_event &= ~RECIEVE_EVENT;
+			recieve_event();
+		} else if (sys_event & IRQ_EVENT) {
+			sys_event &= ~IRQ_EVENT;
+			irq_event();
 		} else if (sys_event & UART_RX_EVENT) {
 			sys_event &= ~UART_RX_EVENT;
 			uart_rx_event();
 		} else if (sys_event & UART_TX_EVENT) {
 			sys_event &= ~UART_TX_EVENT;
 			uart_tx_event();
-		} else if (sys_event & PING_EVENT) {
-			sys_event &= ~PING_EVENT;
-			ping_event();
-		} else {
+		}else {
 			P1OUT &= ~(RLED + GLED);
 			while (1) {
 				delay(50);

@@ -9,9 +9,6 @@
 #include "uart.h"
 #include "events.h"
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
 
 #if !defined(__MSP430_HAS_USCI__)
@@ -60,7 +57,7 @@ void uart_init() {
 //------------------------------------------------------------------------------
 // Inserts char into UART transmit buffer.  Returns 1 if succesful, returns 0 if
 // byte overwritten (buffer full)
-int putchar(int c) {
+int uart_putchar(uint8_t c) {
 	uint16_t head = (tail + size) & ~TXBUFSIZE;
 	if (++size < TXBUFSIZE) {
 		txbuffer[head] = c;
@@ -79,7 +76,7 @@ int putchar(int c) {
 }
 
 //------------------------------------------------------------------------------
-int getchar(void) {
+uint8_t uart_getchar(void) {
 	while (!(IFG2 & UCA0RXIFG))
 		;
 	IFG2 &= ~UCA0RXIFG;
@@ -89,19 +86,12 @@ int getchar(void) {
 //------------------------------------------------------------------------------
 void print(const char *s) {
 	while (*s)
-		putchar(*s++);
+		uart_putchar(*s++);
 }
 
 void print_x(uint8_t *s, uint8_t size) {
 	while (size--)
-		putchar(*s++);
-}
-
-//------------------------------------------------------------------------------
-void printx(const uint8_t c) {
-	static char hex_table[] = "0123456789abcdef";
-	putchar(hex_table[(c & 0xF0) >> 4]);
-	putchar(hex_table[c & 0x0F]);
+		uart_putchar(*s++);
 }
 
 #pragma vector=USCIAB0TX_VECTOR
@@ -119,6 +109,6 @@ __interrupt void USCI0TX_ISR(void) {
 /*  Echo    back    RXed    character,  confirm TX  buffer  is  ready   first   */
 #pragma vector=USCIAB0RX_VECTOR
 __interrupt void USCI0RX_ISR(void) {
-	putchar(UCA0RXBUF);
+	uart_putchar(UCA0RXBUF);
 }
 

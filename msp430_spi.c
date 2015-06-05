@@ -24,16 +24,15 @@
 
 #include <msp430.h>
 #include "msp430_spi.h"
-#include "nrf_userconfig.h"
-
+#include "nrfradio.h"
 
 #ifdef __MSP430_HAS_USI__
 void spi_init()
 {
 	/* USI SPI setup */
 	USICTL0 |= USISWRST;
-	USICTL1 = USICKPH;                // USICKPH=1 means sampling is done on the leading edge of the clock
-	USICKCTL = USISSEL_2 | USIDIV_0;  // Clock source = SMCLK/1
+	USICTL1 = USICKPH; // USICKPH=1 means sampling is done on the leading edge of the clock
+	USICKCTL = USISSEL_2 | USIDIV_0;// Clock source = SMCLK/1
 	USICTL0 = USIPE7 | USIPE6 | USIPE5 | USIMST | USIOE;
 	USISR = 0x0000;
 }
@@ -43,7 +42,7 @@ uint8_t spi_transfer(uint8_t inb)
 	USISRL = inb;
 	USICNT = 8;            // Start SPI transfer
 	while ( !(USICTL1 & USIIFG) )
-		;
+	;
 	return USISRL;
 }
 
@@ -53,7 +52,7 @@ uint16_t spi_transfer16(uint16_t inw)
 	USISR = inw;
 	USICNT = 16 | USI16B;  // Start 16-bit SPI transfer
 	while ( !(USICTL1 & USIIFG) )
-		;
+	;
 	return USISR;
 }
 
@@ -63,7 +62,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	USISR = inw;
 	USICNT = 9 | USI16B;  // Start 9-bit SPI transfer
 	while ( !(USICTL1 & USIIFG) )
-		;
+	;
 	return USISR;
 }
 #endif
@@ -83,18 +82,18 @@ void spi_init()
 
 	/* USCI-A specific SPI setup */
 	UCA0CTL1 |= UCSWRST;
-	UCA0MCTL = 0x00;  // Clearing modulation control per TI user's guide recommendation
-	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCA0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCA0MCTL = 0x00; // Clearing modulation control per TI user's guide recommendation
+	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;// SPI mode 0, master
+	UCA0BR0 = 0x01;// SPI clocked at same speed as SMCLK
 	UCA0BR1 = 0x00;
-	UCA0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_A module.
+	UCA0CTL1 = UCSSEL_2;// Clock = SMCLK, clear UCSWRST and enables USCI_A module.
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(IFG2 & UCA0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(IFG2 & UCA0RXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCA0RXBUF;
 }
 
@@ -105,11 +104,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCA0TXBUF = inw8[1];
 	while ( !(IFG2 & UCA0RXIFG) )
-		;
+	;
 	retw8[1] = UCA0RXBUF;
 	UCA0TXBUF = inw8[0];
 	while ( !(IFG2 & UCA0RXIFG) )
-		;
+	;
 	retw8[0] = UCA0RXBUF;
 	return retw;
 }
@@ -129,10 +128,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P1OUT |= BIT2;
+	P1OUT |= BIT2;
 	P1OUT |= BIT4;
 	if (P1IN & BIT1)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P1OUT &= ~BIT4;
 
 	// Restore port states and continue with 8-bit SPI
@@ -147,53 +146,51 @@ uint16_t spi_transfer9(uint16_t inw)
 }
 #endif
 
-
 #if defined(__MSP430_HAS_USCI__) && defined(SPI_DRIVER_USCI_B) && !defined(__MSP430_HAS_TB3__)
-void spi_init()
-{
+void spi_init() {
 	/* Configure ports on MSP430 device for USCI_B */
 	P1SEL |= BIT5 | BIT6 | BIT7;
 	P1SEL2 |= BIT5 | BIT6 | BIT7;
 
 	/* USCI-B specific SPI setup */
 	UCB0CTL1 |= UCSWRST;
-	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
+	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC; // SPI mode 0, master
 	UCB0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
 	UCB0BR1 = 0x00;
-	UCB0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_B module.
+	UCB0CTL1 = UCSSEL_2; // Clock = SMCLK, clear UCSWRST and enables USCI_B module.
 }
 
-uint8_t spi_transfer(uint8_t inb)
-{
+uint8_t spi_transfer(uint8_t inb) {
 	UCB0TXBUF = inb;
-	while ( !(IFG2 & UCB0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while (!(IFG2 & UCB0RXIFG))
+		// Wait for RXIFG indicating remote byte received via SOMI
 		;
 	return UCB0RXBUF;
 }
 
-uint16_t spi_transfer16(uint16_t inw)
-{
+uint16_t spi_transfer16(uint16_t inw) {
 	uint16_t retw;
-	uint8_t *retw8 = (uint8_t *)&retw, *inw8 = (uint8_t *)&inw;
+	uint8_t *retw8 = (uint8_t *) &retw, *inw8 = (uint8_t *) &inw;
 
 	UCB0TXBUF = inw8[1];
-	while ( !(IFG2 & UCB0RXIFG) )
+	while (!(IFG2 & UCB0RXIFG))
 		;
 	retw8[1] = UCB0RXBUF;
 	UCB0TXBUF = inw8[0];
-	while ( !(IFG2 & UCB0RXIFG) )
+	while (!(IFG2 & UCB0RXIFG))
 		;
 	retw8[0] = UCB0RXBUF;
 	return retw;
 }
 
-uint16_t spi_transfer9(uint16_t inw)
-{
+uint16_t spi_transfer9(uint16_t inw) {
 	uint8_t p1dir_save, p1out_save, p1ren_save;
-	uint16_t retw=0;
+	uint16_t retw = 0;
 
 	/* Reconfigure I/O ports for bitbanging the MSB */
-	p1ren_save = P1REN; p1out_save = P1OUT; p1dir_save = P1DIR;
+	p1ren_save = P1REN;
+	p1out_save = P1OUT;
+	p1dir_save = P1DIR;
 	P1REN &= ~(BIT5 | BIT6 | BIT7);
 	P1OUT &= ~(BIT5 | BIT6 | BIT7);
 	P1DIR = (P1DIR & ~(BIT5 | BIT6 | BIT7)) | BIT5 | BIT7;
@@ -215,7 +212,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P1OUT = p1out_save;
 	P1REN = p1ren_save;
 
-	retw |= spi_transfer( (uint8_t)(inw & 0x00FF) );
+	retw |= spi_transfer((uint8_t) (inw & 0x00FF));
 	return retw;
 }
 #endif
@@ -229,18 +226,18 @@ void spi_init()
 
 	/* USCI-A specific SPI setup */
 	UCA0CTL1 |= UCSWRST;
-	UCA0MCTL = 0x00;  // Clearing modulation control per TI user's guide recommendation
-	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCA0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCA0MCTL = 0x00; // Clearing modulation control per TI user's guide recommendation
+	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;// SPI mode 0, master
+	UCA0BR0 = 0x01;// SPI clocked at same speed as SMCLK
 	UCA0BR1 = 0x00;
-	UCA0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_A module.
+	UCA0CTL1 = UCSSEL_2;// Clock = SMCLK, clear UCSWRST and enables USCI_A module.
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(IFG2 & UCA0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(IFG2 & UCA0RXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCA0RXBUF;
 }
 
@@ -251,11 +248,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCA0TXBUF = inw8[1];
 	while ( !(IFG2 & UCA0RXIFG) )
-		;
+	;
 	retw8[1] = UCA0RXBUF;
 	UCA0TXBUF = inw8[0];
 	while ( !(IFG2 & UCA0RXIFG) )
-		;
+	;
 	retw8[0] = UCA0RXBUF;
 	return retw;
 }
@@ -275,10 +272,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P3OUT |= BIT4;
+	P3OUT |= BIT4;
 	P3OUT |= BIT0;
 	if (P3IN & BIT5)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P3OUT &= ~BIT0;
 
 	// Restore port states and continue with 8-bit SPI
@@ -301,17 +298,17 @@ void spi_init()
 
 	/* USCI-B specific SPI setup */
 	UCB0CTL1 |= UCSWRST;
-	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCB0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC; // SPI mode 0, master
+	UCB0BR0 = 0x01;// SPI clocked at same speed as SMCLK
 	UCB0BR1 = 0x00;
-	UCB0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_B module.
+	UCB0CTL1 = UCSSEL_2;// Clock = SMCLK, clear UCSWRST and enables USCI_B module.
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCB0TXBUF = inb;
-	while ( !(IFG2 & UCB0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(IFG2 & UCB0RXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCB0RXBUF;
 }
 
@@ -322,11 +319,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCB0TXBUF = inw8[1];
 	while ( !(IFG2 & UCB0RXIFG) )
-		;
+	;
 	retw8[1] = UCB0RXBUF;
 	UCB0TXBUF = inw8[0];
 	while ( !(IFG2 & UCB0RXIFG) )
-		;
+	;
 	retw8[0] = UCB0RXBUF;
 	return retw;
 }
@@ -346,10 +343,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P3OUT |= BIT1;
+	P3OUT |= BIT1;
 	P3OUT |= BIT3;
 	if (P3IN & BIT2)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P3OUT &= ~BIT3;
 
 	// Restore port states and continue with 8-bit SPI
@@ -368,28 +365,28 @@ uint16_t spi_transfer9(uint16_t inw)
 void spi_init()
 {
 	/* Configure ports on MSP430 device for USCI_A */
-	#ifdef __MSP430F5172
+#ifdef __MSP430F5172
 	P1SEL |= BIT0 | BIT1 | BIT2;
-	#endif
-	#ifdef __MSP430F5529
+#endif
+#ifdef __MSP430F5529
 	P3SEL |= BIT3 | BIT4;
 	P2SEL |= BIT7;
-	#endif
+#endif
 
 	/* USCI-A specific SPI setup */
 	UCA0CTL1 |= UCSWRST;
-	UCA0MCTL = 0x00;  // Clearing modulation control per TI user's guide recommendation
-	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCA0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCA0MCTL = 0x00; // Clearing modulation control per TI user's guide recommendation
+	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;// SPI mode 0, master
+	UCA0BR0 = 0x01;// SPI clocked at same speed as SMCLK
 	UCA0BR1 = 0x00;
-	UCA0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_A module.
+	UCA0CTL1 = UCSSEL_2;// Clock = SMCLK, clear UCSWRST and enables USCI_A module.
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(UCA0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(UCA0IFG & UCRXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCA0RXBUF;
 }
 
@@ -400,11 +397,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCA0TXBUF = inw8[1];
 	while ( !(UCA0IFG & UCRXIFG) )
-		;
+	;
 	retw8[1] = UCA0RXBUF;
 	UCA0TXBUF = inw8[0];
 	while ( !(UCA0IFG & UCRXIFG) )
-		;
+	;
 	retw8[0] = UCA0RXBUF;
 	return retw;
 }
@@ -424,10 +421,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P1OUT |= BIT1;
+	P1OUT |= BIT1;
 	P1OUT |= BIT0;
 	if (P1IN & BIT2)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P1OUT &= ~BIT0;
 
 	// Restore port states and continue with 8-bit SPI
@@ -458,10 +455,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P3OUT |= BIT3;
+	P3OUT |= BIT3;
 	P2OUT |= BIT7;
 	if (P3IN & BIT4)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P2OUT &= ~BIT7;
 
 	// Restore port states and continue with 8-bit SPI
@@ -481,26 +478,26 @@ uint16_t spi_transfer9(uint16_t inw)
 void spi_init()
 {
 	/* Configure ports on MSP430 device for USCI_B */
-	#ifdef __MSP430F5172
+#ifdef __MSP430F5172
 	P1SEL |= BIT3 | BIT4 | BIT5;
-	#endif
-	#ifdef __MSP430F5529
+#endif
+#ifdef __MSP430F5529
 	P3SEL |= BIT0 | BIT1 | BIT2;
-	#endif
+#endif
 
 	/* USCI-B specific SPI setup */
 	UCB0CTL1 |= UCSWRST;
-	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCB0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC; // SPI mode 0, master
+	UCB0BR0 = 0x01;// SPI clocked at same speed as SMCLK
 	UCB0BR1 = 0x00;
-	UCB0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_B module.
+	UCB0CTL1 = UCSSEL_2;// Clock = SMCLK, clear UCSWRST and enables USCI_B module.
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCB0TXBUF = inb;
-	while ( !(UCB0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(UCB0IFG & UCRXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCB0RXBUF;
 }
 
@@ -511,11 +508,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCB0TXBUF = inw8[1];
 	while ( !(UCB0IFG & UCRXIFG) )
-		;
+	;
 	retw8[1] = UCB0RXBUF;
 	UCB0TXBUF = inw8[0];
 	while ( !(UCB0IFG & UCRXIFG) )
-		;
+	;
 	retw8[0] = UCB0RXBUF;
 	return retw;
 }
@@ -535,10 +532,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P1OUT |= BIT4;
+	P1OUT |= BIT4;
 	P1OUT |= BIT3;
 	if (P1IN & BIT5)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P1OUT &= ~BIT3;
 
 	// Restore port states and continue with 8-bit SPI
@@ -567,10 +564,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P3OUT |= BIT0;
+	P3OUT |= BIT0;
 	P3OUT |= BIT2;
 	if (P3IN & BIT1)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P3OUT &= ~BIT2;
 
 	// Restore port states and continue with 8-bit SPI
@@ -591,15 +588,15 @@ uint16_t spi_transfer9(uint16_t inw)
 void spi_init()
 {
 	/* Configure ports on MSP430 device for USCI_A0 */
-	#if defined(__MSP430FR5969__)
+#if defined(__MSP430FR5969__)
 	P1SEL0 &= ~BIT5;
 	P1SEL1 |= BIT5;
 	P2SEL0 &= ~(BIT0 | BIT1);
 	P2SEL1 |= BIT0 | BIT1;
-	#endif
-	#if defined(__MSP430FR5739__)
-	
-	#endif
+#endif
+#if defined(__MSP430FR5739__)
+
+#endif
 
 	/* USCI_A specific SPI setup */
 	UCA0CTLW0 |= UCSWRST;
@@ -611,8 +608,8 @@ void spi_init()
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(UCA0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(UCA0IFG & UCRXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCA0RXBUF;
 }
 
@@ -623,11 +620,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCA0TXBUF = inw8[1];
 	while ( !(UCA0IFG & UCRXIFG) )
-		;
+	;
 	retw8[1] = UCA0RXBUF;
 	UCA0TXBUF = inw8[0];
 	while ( !(UCA0IFG & UCRXIFG) )
-		;
+	;
 	retw8[0] = UCA0RXBUF;
 	return retw;
 }
@@ -655,10 +652,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P2OUT |= BIT0;
+	P2OUT |= BIT0;
 	P1OUT |= BIT5;
 	if (P2IN & BIT1)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P1OUT &= ~BIT5;
 
 	// Restore port states and continue with 8-bit SPI
@@ -683,13 +680,13 @@ uint16_t spi_transfer9(uint16_t inw)
 void spi_init()
 {
 	/* Configure ports on MSP430 device for USCI_A1 */
-	#if defined(__MSP430FR5969__)
+#if defined(__MSP430FR5969__)
 	P2SEL0 &= ~(BIT4 | BIT5 | BIT6);
 	P2SEL1 |= BIT4 | BIT5 | BIT6;
-	#endif
-	#if defined(__MSP430FR5739__)
-	
-	#endif
+#endif
+#if defined(__MSP430FR5739__)
+
+#endif
 
 	/* USCI_A specific SPI setup */
 	UCA1CTLW0 |= UCSWRST;
@@ -701,8 +698,8 @@ void spi_init()
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA1TXBUF = inb;
-	while ( !(UCA1IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(UCA1IFG & UCRXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCA1RXBUF;
 }
 
@@ -713,11 +710,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCA1TXBUF = inw8[1];
 	while ( !(UCA1IFG & UCRXIFG) )
-		;
+	;
 	retw8[1] = UCA1RXBUF;
 	UCA1TXBUF = inw8[0];
 	while ( !(UCA1IFG & UCRXIFG) )
-		;
+	;
 	retw8[0] = UCA1RXBUF;
 	return retw;
 }
@@ -739,10 +736,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P2OUT |= BIT5;
+	P2OUT |= BIT5;
 	P2OUT |= BIT4;
 	if (P2IN & BIT6)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P2OUT &= ~BIT4;
 
 	// Restore port states and continue with 8-bit SPI
@@ -762,15 +759,15 @@ uint16_t spi_transfer9(uint16_t inw)
 void spi_init()
 {
 	/* Configure ports on MSP430 device for USCI_B0 */
-	#if defined(__MSP430FR5969__)
+#if defined(__MSP430FR5969__)
 	P1SEL0 &= ~(BIT6 | BIT7);
 	P1SEL1 |= BIT6 | BIT7;
 	P2SEL0 &= ~BIT2;
 	P2SEL1 |= BIT2;
-	#endif
-	#if defined(__MSP430FR5739__)
-	
-	#endif
+#endif
+#if defined(__MSP430FR5739__)
+
+#endif
 
 	/* USCI_B specific SPI setup */
 	UCB0CTLW0 |= UCSWRST;
@@ -782,8 +779,8 @@ void spi_init()
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCB0TXBUF = inb;
-	while ( !(UCB0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
-		;
+	while ( !(UCB0IFG & UCRXIFG) ) // Wait for RXIFG indicating remote byte received via SOMI
+	;
 	return UCB0RXBUF;
 }
 
@@ -794,11 +791,11 @@ uint16_t spi_transfer16(uint16_t inw)
 
 	UCB0TXBUF = inw8[1];
 	while ( !(UCB0IFG & UCRXIFG) )
-		;
+	;
 	retw8[1] = UCB0RXBUF;
 	UCB0TXBUF = inw8[0];
 	while ( !(UCB0IFG & UCRXIFG) )
-		;
+	;
 	retw8[0] = UCB0RXBUF;
 	return retw;
 }
@@ -826,10 +823,10 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	// Perform single-bit transfer
 	if (inw & 0x0100)
-		P1OUT |= BIT6;
+	P1OUT |= BIT6;
 	P2OUT |= BIT2;
 	if (P1IN & BIT7)
-		retw |= 0x0100;
+	retw |= 0x0100;
 	P2OUT &= ~BIT2;
 
 	// Restore port states and continue with 8-bit SPI
